@@ -22,6 +22,18 @@ bld/
 [Oo]bj/
 [Ll]og/
 [Ll]ogs/
+[Ll]ogFiles/
+##Add a new line ignorin a Bin and Obj folder
+## for all projects
+## in the solution
+##[Bb]in/
+##[Oo]bj/
+# Visual Studio Code
+.vscode/
+
+
+
+
 
 # .NET Core
 project.lock.json
