@@ -1,7 +1,11 @@
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<TodoDb>(opt => opt.UseInMemoryDatabase("TodoList"));
+builder.Services.AddDbContext<ApplicationDbContext>(opt => opt.UseInMemoryDatabase("AppDb"));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 builder.Services.AddEndpointsApiExplorer();
@@ -12,7 +16,13 @@ builder.Services.AddOpenApiDocument(config =>
     config.Version = "v1";
 });
 
+builder.Services.AddIdentityApiEndpoints<IdentityUser>()
+    .AddEntityFrameworkStores<ApplicationDbContext>();
+
+builder.Services.AddAuthorization();
+
 var app = builder.Build();
+app.MapIdentityApi<IdentityUser>();
 
 if (app.Environment.IsDevelopment())
 {
@@ -24,7 +34,9 @@ if (app.Environment.IsDevelopment())
         config.DocumentPath = "/swagger/{documentName}/swagger.json";
         config.DocExpansion = "list";
     });
+
 }
+
 
 
 
@@ -37,7 +49,40 @@ todoItems.MapPost("/", CreateTodo);
 todoItems.MapPut("/{id}", UpdateTodo);
 todoItems.MapDelete("/{id}", DeleteTodo);
 
+
+app.MapPost("/logout", async (SignInManager<IdentityUser> signInManager,
+    [FromBody] object empty) =>
+{
+    if (empty != null)
+    {
+        await signInManager.SignOutAsync();
+        return Results.Ok();
+    }
+    return Results.Unauthorized();
+})
+//.WithOpenApi()
+.RequireAuthorization();
+
+app.MapGet("/weatherforecast", (HttpContext httpContext) =>
+{
+    var forecast = Enumerable.Range(1, 5).Select(index =>
+        new WeatherForecast
+        {
+            Date = DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
+            TemperatureC = Random.Shared.Next(-20, 55),
+            Summary = WeatherForecast.summaries[Random.Shared.Next(WeatherForecast.summaries.Length)]
+        })
+        .ToArray();
+    return forecast;
+})
+.WithName("GetWeatherForecast")
+//.WithOpenApi()
+.RequireAuthorization();
+
+
+
 app.Run();
+
 
 static async Task<IResult> GetAllTodos(TodoDb db)
 {
